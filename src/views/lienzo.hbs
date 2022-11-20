@@ -1,0 +1,221 @@
+<div class="col-3">
+    <div class="btn-group-vertical">
+        <button type="button" class="btn btn-primary rect">Rectangulo</button>
+        <button type="button" class="btn btn-primary flec">Flecha</button>
+        <button type="button" class="btn btn-primary text">Texto</button>
+    </div>
+</div>
+<div class="col-9">
+    <div id="container" style="background: gold;width: 600px;height: 300px;"></div>
+</div>
+<script>
+
+    var stage = new Konva.Stage({
+        width: 600,
+        height: 300,
+        container: 'container'
+    });
+    let layer = new Konva.Layer();
+    stage.add(layer);
+    //********para redimencionar las figuras*********
+    var tr = new Konva.Transformer();
+    layer.add(tr);
+
+    // by default select all shapes
+    //  tr.nodes([rect1, rect2]);
+    var circle = new Konva.Circle({
+        x: stage.width() / 2,
+        y: stage.height() / 2,
+        radius: 70,
+        fill: 'red',
+        stroke: 'black',
+        strokeWidth: 4,
+        draggable: true
+    });
+    // add the shape to the layer
+    layer.add(circle);
+
+    // add the layer to the stage
+    stage.add(layer);
+
+    // draw the image
+    layer.draw();
+
+
+    layer.on('mousedown touchstart', function () {
+        console.log('user input', this.name());
+    });
+    circle.on('dragstart', function () {
+        console.log('x: ' + circle.getX());
+    });
+    circle.on('dragend', function () {
+        console.log('x: ' + circle.getX());
+    });
+    // add a new feature, lets add ability to draw selection rectangle
+    var selectionRectangle = new Konva.Rect({
+        fill: 'rgba(0,0,255,0.5)',
+        visible: false,
+    });
+    layer.add(selectionRectangle);
+
+    var x1, y1, x2, y2;
+    stage.on('mousedown touchstart', (e) => {
+        // do nothing if we mousedown on any shape
+        if (e.target !== stage) {
+            return;
+        }
+        e.evt.preventDefault();
+        x1 = stage.getPointerPosition().x;
+        y1 = stage.getPointerPosition().y;
+        x2 = stage.getPointerPosition().x;
+        y2 = stage.getPointerPosition().y;
+
+        selectionRectangle.visible(true);
+        selectionRectangle.width(0);
+        selectionRectangle.height(0);
+    });
+
+    stage.on('mousemove touchmove', (e) => {
+        // do nothing if we didn't start selection
+        if (!selectionRectangle.visible()) {
+            return;
+        }
+        e.evt.preventDefault();
+        x2 = stage.getPointerPosition().x;
+        y2 = stage.getPointerPosition().y;
+        console.log('touchmove');
+    });
+
+    stage.on('mouseup touchend', (e) => {
+        // do nothing if we didn't start selection
+        if (!selectionRectangle.visible()) {
+            return;
+        }
+        e.evt.preventDefault();
+        // update visibility in timeout, so we can check it in click event
+        setTimeout(() => {
+            selectionRectangle.visible(false);
+        });
+
+        var shapes = stage.find('.rect');
+        var box = selectionRectangle.getClientRect();
+        var selected = shapes.filter((shape) =>
+            Konva.Util.haveIntersection(box, shape.getClientRect())
+        );
+        tr.nodes(selected);
+    });
+
+    // clicks should select/deselect shapes
+    stage.on('click tap', function (e) {
+        // if we are selecting with rect, do nothing
+        if (selectionRectangle.visible()) {
+            return;
+        }
+
+        // if click on empty area - remove all selections
+        if (e.target === stage) {
+            tr.nodes([]);
+            return;
+        }
+        // do nothing if clicked NOT on our rectangles
+        if (!e.target.hasName('rect')) {
+            return;
+        }
+
+        // do we pressed shift or ctrl?
+        const metaPressed = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey;
+        const isSelected = tr.nodes().indexOf(e.target) >= 0;
+
+        if (!metaPressed && !isSelected) {
+            // if no key pressed and the node is not selected
+            // select just one
+            tr.nodes([e.target]);
+        } else if (metaPressed && isSelected) {
+            // if we pressed keys and node was selected
+            // we need to remove it from selection:
+            const nodes = tr.nodes().slice(); // use slice to have new copy of array
+            // remove node from array
+            nodes.splice(nodes.indexOf(e.target), 1);
+            tr.nodes(nodes);
+        } else if (metaPressed && !isSelected) {
+            // add the node into selection
+            const nodes = tr.nodes().concat([e.target]);
+            tr.nodes(nodes);
+        }
+    });
+    //crear flecha
+    function addArrow(layer) {
+        var w = 100;
+        var h = 100;
+        var arrow = new Konva.Arrow({
+
+            x: stage.width() / 4,
+            y: stage.height() / 4,
+            points: [0, 0, w / 2, h / 2],
+            pointerLength: 20,
+            pointerWidth: 20,
+            fill: 'black',
+            stroke: 'black',
+            strokeWidth: 4,
+            draggable: true
+        });
+
+        // add the shape to the layer
+        layer.add(arrow);
+    }
+    //crear rectangulo
+    let figuras = [];
+    let i = 0;
+    function addRectangle(layer) {
+        var scale = 1;
+
+        var rectangle = new Konva.Rect({
+            x: 12,
+            y: 12,
+            numPoints: 5,
+            innerRadius: 30,
+            outerRadius: 50,
+            fill: "#89b717",
+            opacity: 0.8,
+            draggable: true,
+            name: 'rect',
+            width: 128,
+            height: 50,
+            scale: {
+                x: scale,
+                y: scale
+            },
+            shadowColor: "black",
+            shadowBlur: 4,
+            shadowOffset: {
+                x: 5,
+                y: 5
+            },
+            shadowOpacity: 0.6,
+            // custom attribute
+            startScale: scale
+        });
+
+        layer.add(rectangle);
+        figuras.push({
+            id: i + 'target',
+            tipo: 'rect'
+        });
+        i++;
+        console.log('crea');
+    }
+
+    $('.rect').on('click', () => {
+        console.log('click rectangulo');
+        addRectangle(layer)
+    });
+    $('.flec').on('click', () => {
+        console.log('click flecha');
+        addArrow(layer);
+        console.log('cantidad figuras: ',figuras);
+    });
+    //flechas
+
+</script>
+
+</script>
